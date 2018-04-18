@@ -8,6 +8,17 @@ import time
 
 import gifToPF
 
+
+###################################################################
+#
+#  ToDo: 
+#      - better CLI parameter handling
+#      - find out why PILlow fucks up some .GIF files
+#      - compress cached images
+#
+###################################################################
+
+
 renderOutputPath = "rendered/"
 renderedFileSuffix = ".pkl"
 

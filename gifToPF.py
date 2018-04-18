@@ -14,6 +14,7 @@ def main(imgPath, offsetX=0, offsetY=0):
     i = 0
     ii = ImageSequence.Iterator(img)
     for frame in ii:
+        frame.save('rendered/test_%02d.png' % i, 'PNG')
         imageBuffer.append(generatePFLines(frame, offsetX, offsetY))
         i += 1
         print("converting image... " + str(i) + "/" + str(img.n_frames) + " done", end='\r')
@@ -36,10 +37,11 @@ def generatePFLines(img, offX, offY):
     for y in range(img.size[1]):
         line = ""
         for x in range(img.size[0]):
+            rgb = img.getpixel((x, y))
             if hasAlpha:
-                hexColor = '%02x%02x%02x%02x' % img.getpixel((x, y))
+                hexColor = '%02x%02x%02x%02x' % rgb
             else:
-                hexColor = '%02x%02x%02x' % img.getpixel((x, y))
+                hexColor = '%02x%02x%02x' % rgb
             line += 'PX %d %d %s\n' % (x + offX, y + offY, hexColor)
         lines.append(line)
     return lines
