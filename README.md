@@ -6,7 +6,8 @@ Install necessary libraries
 `pip install pillow`
 
 Run with
-`python gifFlut.py host port pathToImageFile`
+`python gifFlut.py host port pathToImageFile`  
+(Requires python3.3 or higher)
 
 ## Pixelflut Server
 

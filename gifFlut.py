@@ -5,7 +5,7 @@ import pickle
 import os
 import threading
 import time
-import lz4.frame
+import lzma
 
 import gifToPF
 
@@ -15,21 +15,21 @@ import gifToPF
 #  ToDo:
 #      - better CLI parameter handling
 #      - find out why PILlow fucks up some .GIF files
-#      - compress cached images
 #
 ###################################################################
 
 
 renderOutputPath = "rendered/"
-renderedFileSuffix = ".pkl"
+renderedFileSuffix = ".pklz"
 
 reconnectInterval = 1
 
 
-def saveConvertedImage(obj, filename, compressed=False):
+def saveConvertedImage(obj, filename, compressed=True):
     with open(filename, 'wb') as output:
         if(compressed):
-            output.write(lz4.frame.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), compression_level=8))
+            with lzma.LZMAFile(output, "w", filters=[{'id': lzma.FILTER_LZMA2, 'preset': 1}]) as lzf:
+                lzf.write(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
         else:
             pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
@@ -37,7 +37,8 @@ def saveConvertedImage(obj, filename, compressed=False):
 def loadConvertedImage(filename, compressed=True):
     with open(filename, 'rb') as input:
         if(compressed):
-            return pickle.loads(lz4.frame.decompress(input.read()))
+            with lzma.LZMAFile(input, "r") as lzf:
+                return pickle.loads(lzf.read())
         else:
             return pickle.load(input)
 
@@ -59,7 +60,9 @@ def getConvertedImage(imgPath):
                       "\". Using the cached version: " + renderOutputPath + f)
                 print("If you do not want to load that file or update the cached version, simply delete the " +
                       renderedFileSuffix + " file.")
+                print("Unpacking and loading compressed file...")
                 data = loadConvertedImage(renderOutputPath + f)
+                print("done.")
                 break
         if(not foundCachedImage):  # convert image, if no cached file exists
             data = gifToPF.main(imgPath)

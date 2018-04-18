@@ -14,7 +14,7 @@ def main(imgPath, offsetX=0, offsetY=0):
     i = 0
     ii = ImageSequence.Iterator(img)
     for frame in ii:
-        frame.save('rendered/test_%02d.png' % i, 'PNG')
+        #frame.save('rendered/test_%02d.png' % i, 'PNG')
         imageBuffer.append(generatePFLines(frame, offsetX, offsetY))
         i += 1
         print("converting image... " + str(i) + "/" + str(img.n_frames) + " done", end='\r')
