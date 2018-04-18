@@ -3,6 +3,8 @@ import socket
 import sys
 import pickle
 import os
+import threading
+import time
 
 import gifToPF
 
@@ -49,6 +51,10 @@ def getConvertedImage(imgPath):
     return data
 
 
+def sendData():
+    while(running):
+        for lineNum in range(len(frameBuffer[curFrame])):
+            sock.sendall(frameBuffer[curFrame][lineNum].encode("ascii"))
 
 
 def main(host, port, imgPath):
@@ -56,6 +62,35 @@ def main(host, port, imgPath):
         os.makedirs(renderOutputPath)
 
     data = getConvertedImage(imgPath)
+    global frameBuffer
+    frameBuffer = data['frameBuffer']
+    frameTime = data['duration']
+
+    global running
+    running = True
+    global curFrame
+    curFrame = 0
+
+    global sock
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, int(port)))
+
+    thread = threading.Thread(target=sendData)
+    thread.start()
+
+    try:
+        while(running):
+            if(frameTime > 0):
+                i = curFrame + 1
+                # safely increment curFrame, because is global and might cause out of bounds exception if read at the wrong time
+                if i >= len(frameBuffer): 
+                    i = 0
+                curFrame = i
+                time.sleep(frameTime / 1000)
+                
+    except KeyboardInterrupt:
+        running = False
+        print("stopping")
 
 
 if __name__ == "__main__":
