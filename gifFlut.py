@@ -11,6 +11,8 @@ import gifToPF
 renderOutputPath = "rendered/"
 renderedFileSuffix = ".pkl"
 
+reconnectInterval = 1
+
 
 def saveConvertedImage(obj, filename):
     with open(filename, 'wb') as output:
@@ -54,24 +56,31 @@ def getConvertedImage(imgPath):
 def sendData():
     while(running):
         for lineNum in range(len(frameBuffer[curFrame])):
-            try:
-                sock.sendall(frameBuffer[curFrame][lineNum].encode("ascii"))
-            except (ConnectionResetError, ConnectionAbortedError):
-                time.sleep(1)
-                connect()
-        
+            if running:
+                try:
+                    sock.sendall(frameBuffer[curFrame]
+                                 [lineNum].encode("ascii"))
+                except (ConnectionResetError, ConnectionAbortedError, OSError):
+                    time.sleep(0.1)
+                    connect()
 
 
 def connect():
-    global sock
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((pxHost, int(pxPort)))
+    global sock, lastTimeCalled
+    if time.time() - lastTimeCalled >= reconnectInterval:
+        lastTimeCalled = time.time()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.connect((pxHost, int(pxPort)))
+        except ConnectionRefusedError:
+            print("Connection refused")
 
-def main(host, port, imgPath):
-    global pxHost, pxPort
+
+def main(host, port, imgPath, numThreads=1):
+    global pxHost, pxPort, lastTimeCalled
     pxHost = host
     pxPort = port
-    
+    lastTimeCalled = 0
 
     if not os.path.exists(renderOutputPath):
         os.makedirs(renderOutputPath)
@@ -85,23 +94,26 @@ def main(host, port, imgPath):
 
     connect()
 
-    thread = threading.Thread(target=sendData)
-    thread.start()
+    threads = []
+    for t in range(numThreads):
+        thrd = threading.Thread(target=sendData)
+        threads.append(thrd)
+        thrd.start()
 
     try:
         while(running):
             if(frameTime > 0):
                 i = curFrame + 1
                 # safely increment curFrame, because is global and might cause out of bounds exception if read at the wrong time
-                if i >= len(frameBuffer): 
+                if i >= len(frameBuffer):
                     i = 0
                 curFrame = i
                 time.sleep(frameTime / 1000)
-                
+
     except KeyboardInterrupt:
         running = False
-        print("stopping")
+        print("stopping...")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], 1)
