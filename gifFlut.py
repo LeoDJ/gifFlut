@@ -54,26 +54,36 @@ def getConvertedImage(imgPath):
 def sendData():
     while(running):
         for lineNum in range(len(frameBuffer[curFrame])):
-            sock.sendall(frameBuffer[curFrame][lineNum].encode("ascii"))
+            try:
+                sock.sendall(frameBuffer[curFrame][lineNum].encode("ascii"))
+            except (ConnectionResetError, ConnectionAbortedError):
+                time.sleep(1)
+                connect()
+        
 
+
+def connect():
+    global sock
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((pxHost, int(pxPort)))
 
 def main(host, port, imgPath):
+    global pxHost, pxPort
+    pxHost = host
+    pxPort = port
+    
+
     if not os.path.exists(renderOutputPath):
         os.makedirs(renderOutputPath)
 
     data = getConvertedImage(imgPath)
-    global frameBuffer
+    global frameBuffer, running, curFrame
     frameBuffer = data['frameBuffer']
     frameTime = data['duration']
-
-    global running
     running = True
-    global curFrame
     curFrame = 0
 
-    global sock
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, int(port)))
+    connect()
 
     thread = threading.Thread(target=sendData)
     thread.start()
