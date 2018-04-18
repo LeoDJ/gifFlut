@@ -18,9 +18,10 @@ def main(imgPath, offsetX=0, offsetY=0):
         i += 1
         print("converting image... " + str(i) + "/" + str(img.n_frames) + " done", end='\r')
     print()
-    return (imageBuffer, duration)
+    return {'frameBuffer': imageBuffer, 'duration': duration}
 
 
+#returns array of pixelflut commands for whole line
 def generatePFLines(img, offX, offY):
     # convert gif to rgb format (with respect to transparency)
     if img.format == "GIF":
