@@ -5,13 +5,14 @@ import pickle
 import os
 import threading
 import time
+import lz4.frame
 
 import gifToPF
 
 
 ###################################################################
 #
-#  ToDo: 
+#  ToDo:
 #      - better CLI parameter handling
 #      - find out why PILlow fucks up some .GIF files
 #      - compress cached images
@@ -25,14 +26,20 @@ renderedFileSuffix = ".pkl"
 reconnectInterval = 1
 
 
-def saveConvertedImage(obj, filename):
+def saveConvertedImage(obj, filename, compressed=False):
     with open(filename, 'wb') as output:
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+        if(compressed):
+            output.write(lz4.frame.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), compression_level=8))
+        else:
+            pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 
-def loadConvertedImage(filename):
+def loadConvertedImage(filename, compressed=True):
     with open(filename, 'rb') as input:
-        return pickle.load(input)
+        if(compressed):
+            return pickle.loads(lz4.frame.decompress(input.read()))
+        else:
+            return pickle.load(input)
 
 
 def getConvertedImage(imgPath):
@@ -56,7 +63,7 @@ def getConvertedImage(imgPath):
                 break
         if(not foundCachedImage):  # convert image, if no cached file exists
             data = gifToPF.main(imgPath)
-            print("saving converted image... ", end='')
+            print("saving converted image... ")
             saveConvertedImage(data, renderOutputPath +
                                imgPath + renderedFileSuffix)
             print("done.")
