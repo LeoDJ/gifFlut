@@ -31,7 +31,7 @@ renderOutputPath = "rendered/"
 renderedFileSuffix = ".pkl"
 renderedFileSuffixCompr = ".pklz"
 
-reconnectInterval = 1
+reconnectInterval = 0.1
 
 
 # appends file extension based on compression
@@ -94,28 +94,39 @@ def getConvertedImage(imgPath, xoff=0, yoff=0, compr=True, regen=False, noCache=
     return data
 
 
-def sendData():
+def sendData(part=0, numParts=1):
+    frameLen = len(frameBuffer[curFrame])
+    partLen = int(frameLen / numParts)
+    partStart = part * partLen
+    partEnd = partStart + partLen - 1
+    if part == numParts - 1: ##last frame must be handled extra
+        partEnd += 1
     while(running):
-        for lineNum in range(len(frameBuffer[curFrame])):
+        for lineNum in range(partStart, partStart + partLen):
             if running:
                 try:
-                    sock.sendall(frameBuffer[curFrame]
+                    sock[part].sendall(frameBuffer[curFrame]
                                  [lineNum].encode("ascii"))
-                except (ConnectionResetError, ConnectionAbortedError, OSError, NameError):
+                except (ConnectionResetError, ConnectionAbortedError, OSError, NameError, IndexError):
                     time.sleep(0.1)
-                    connect()
+                    connect(part)
 
 
-def connect():
-    global sock, lastTimeCalled
+def connect(socketId=0):
+    global sock, lastTimeCalled, currentlyConnecting
     # prevent multiple reconnects from threads and also do reconnect interval timing
-    if time.time() - lastTimeCalled >= reconnectInterval:
+    if time.time() - lastTimeCalled >= reconnectInterval or not currentlyConnecting:
+        currentlyConnecting = True
         lastTimeCalled = time.time()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.insert(socketId, s)
         try:
-            sock.connect((pxHost, int(pxPort)))
+            print("connect " + str(socketId))
+            sock[socketId].connect((pxHost, int(pxPort)))
+            currentlyConnecting = False
         except ConnectionRefusedError:
             print("Connection refused")
+            currentlyConnecting = False
 
 
 def parseArgs():
@@ -144,10 +155,12 @@ def parseArgs():
 def main():
     args = parseArgs()
 
-    global pxHost, pxPort, lastTimeCalled
+    global pxHost, pxPort, lastTimeCalled, sock, currentlyConnecting
     pxHost = args.host
     pxPort = args.port
     lastTimeCalled = 0
+    sock = []
+    currentlyConnecting = False
 
     global frameBuffer, running, curFrame
     data = getConvertedImage(args.imageFile, args.xoffset, args.yoffset,
@@ -159,8 +172,9 @@ def main():
 
     threads = []
     for t in range(args.threads):
-        thrd = threading.Thread(target=sendData)
+        thrd = threading.Thread(target=sendData, args=(t, args.threads))
         threads.append(thrd)
+        time.sleep(0.1)
         thrd.start()
 
     try:

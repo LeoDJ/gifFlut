@@ -6,7 +6,7 @@ from PIL import Image, ImageSequence
 
 import time
 
-packetSize = 4096
+packetSize = 512 #number of pixelflut commands per packet
 
 def main(imgPath, offsetX=0, offsetY=0, algo=0):
     img = Image.open(imgPath)
