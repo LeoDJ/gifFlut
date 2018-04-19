@@ -6,6 +6,7 @@ import os
 import threading
 import time
 import lzma
+import ntpath
 
 import gifToPF
 
@@ -44,19 +45,17 @@ def loadConvertedImage(filename, compressed=True):
 
 
 def getConvertedImage(imgPath):
-    # remove powershell autocomplete prefix
-    if(imgPath.startswith('.\\')):
-        imgPath = imgPath[2:]
+    imgFileName = ntpath.basename(imgPath)
 
-    if imgPath.endswith(renderedFileSuffix):  # load cached file directly
+    if imgFileName.endswith(renderedFileSuffix):  # load cached file directly
         data = loadConvertedImage(imgPath)
     else:
         foundCachedImage = False
         # load cached version of file if exists
         for f in os.listdir(renderOutputPath):
-            if(f.startswith(imgPath)):
+            if(f.startswith(imgFileName)):
                 foundCachedImage = True
-                print("Already found a converted image for \"" + imgPath +
+                print("Already found a converted image for \"" + imgFileName +
                       "\". Using the cached version: " + renderOutputPath + f)
                 print("If you do not want to load that file or update the cached version, simply delete the " +
                       renderedFileSuffix + " file.")
@@ -68,7 +67,7 @@ def getConvertedImage(imgPath):
             data = gifToPF.main(imgPath)
             print("saving converted image... ")
             saveConvertedImage(data, renderOutputPath +
-                               imgPath + renderedFileSuffix)
+                               imgFileName + renderedFileSuffix)
             print("done.")
 
     return data
