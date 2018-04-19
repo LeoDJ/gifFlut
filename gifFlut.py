@@ -62,7 +62,7 @@ def loadConvertedImage(filename):
             return pickle.load(input)
 
 
-def getConvertedImage(imgPath, xoff=0, yoff=0, compr=True, regen=False, noCache=False):
+def getConvertedImage(imgPath, xoff=0, yoff=0, compr=True, regen=False, noCache=False, algo=0):
     imgFileName = ntpath.basename(imgPath)
 
     # load cached file directly
@@ -77,7 +77,7 @@ def getConvertedImage(imgPath, xoff=0, yoff=0, compr=True, regen=False, noCache=
                 cachedFile = f
                 break
         if(not foundCachedImage or regen):  # convert image, if no cached file exists
-            data = gifToPF.main(imgPath, xoff, yoff)
+            data = gifToPF.main(imgPath, xoff, yoff, algo)
             if not noCache:
                 print("saving converted image... ")
                 saveConvertedImage(data, renderOutputPath + imgFileName, compr)
@@ -134,6 +134,8 @@ def parseArgs():
                         default=False, help="overwrite cached file")
     parser.add_argument("-n", "--nocache", action='store_const', const=True,
                         default=False, help="disable writing cache file")
+    parser.add_argument("-a", "--algorithm", type=int, default=0,
+                        help="algorithm selection 0=lineByLine, 1=randomPixel")
 
     args = parser.parse_args()
     return args
@@ -149,7 +151,7 @@ def main():
 
     global frameBuffer, running, curFrame
     data = getConvertedImage(args.imageFile, args.xoffset, args.yoffset,
-                             not args.nocompression, args.regenerate, args.nocache)
+                             not args.nocompression, args.regenerate, args.nocache, args.algorithm)
     frameBuffer = data['frameBuffer']
     frameTime = data['duration']
     running = True
