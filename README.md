@@ -7,14 +7,15 @@ GIFflut also caches the converted images for faster starting later on, when send
 
 GIFflut requires Python 3.3 or higher (because of the `lzma` package).
 
-
-1. Install necessary libraries  
-  `pip install pillow`
-2. Run with standard settings:  
-  `python gifFlut.py host port pathToImageFile`  
-  (Requires python3.3 or higher)
+Install necessary libraries with  
+`pip install pillow`
 
 ## Usage
+
+Basic image rendering with standard settings:  
+`python gifFlut.py host port imageFile`
+
+### Further parameters
 
 ```
 usage: gifFlut.py [-h] [-x XOFFSET] [-y YOFFSET] [-t THREADS] [-u] [-r] [-n]
