@@ -1,4 +1,19 @@
 #!/bin/python
+
+################## GIF to Pixelflut sender ########################
+#
+# Author: LeoDJ
+# Repository: https://github.com/LeoDJ/gifFlut
+#
+# Compliant with Pixelflut servers from defnull (https://github.com/defnull/pixelflut)
+#
+# ToDo:
+#   - find out why PILlow fucks up some .GIF files
+#   - improve performance of data sending (if necessary)
+#   - OPTIONAL: improve performance of image conversion
+#
+###################################################################
+
 import socket
 import sys
 import pickle
@@ -7,17 +22,9 @@ import threading
 import time
 import lzma
 import ntpath
+import argparse
 
 import gifToPF
-
-
-###################################################################
-#
-#  ToDo:
-#      - better CLI parameter handling
-#      - find out why PILlow fucks up some .GIF files
-#
-###################################################################
 
 
 renderOutputPath = "rendered/"
@@ -29,10 +36,14 @@ reconnectInterval = 1
 
 # appends file extension based on compression
 def saveConvertedImage(obj, filename, compressed=True):
+    if not os.path.exists(renderOutputPath):
+        os.makedirs(renderOutputPath)
+
     if compressed:
         filename += renderedFileSuffixCompr
     else:
         filename += renderedFileSuffix
+
     with open(filename, 'wb') as output:
         if(compressed):
             with lzma.LZMAFile(output, "w", filters=[{'id': lzma.FILTER_LZMA2, 'preset': 1}]) as lzf:
@@ -51,10 +62,11 @@ def loadConvertedImage(filename):
             return pickle.load(input)
 
 
-def getConvertedImage(imgPath):
+def getConvertedImage(imgPath, xoff=0, yoff=0, compr=True, regen=False, noCache=False):
     imgFileName = ntpath.basename(imgPath)
 
-    if imgFileName.endswith(renderedFileSuffix) or imgFileName.endswith(renderedFileSuffixCompr):  # load cached file directly
+    # load cached file directly
+    if imgFileName.endswith(renderedFileSuffix) or imgFileName.endswith(renderedFileSuffixCompr):
         data = loadConvertedImage(imgPath)
     else:
         foundCachedImage = False
@@ -62,18 +74,21 @@ def getConvertedImage(imgPath):
         for f in os.listdir(renderOutputPath):
             if(f.startswith(imgFileName)):
                 foundCachedImage = True
-                print("Already found a converted image for \"" + imgFileName +
-                      "\". Using the cached version: " + renderOutputPath + f)
-                print("If you do not want to load that file or update the cached version, simply delete the " +
-                      renderedFileSuffix + " file.")
-                print("Unpacking and loading compressed file...")
-                data = loadConvertedImage(renderOutputPath + f)
-                print("done.")
+                cachedFile = f
                 break
-        if(not foundCachedImage):  # convert image, if no cached file exists
-            data = gifToPF.main(imgPath)
-            print("saving converted image... ")
-            saveConvertedImage(data, renderOutputPath + imgFileName)
+        if(not foundCachedImage or regen):  # convert image, if no cached file exists
+            data = gifToPF.main(imgPath, xoff, yoff)
+            if not noCache:
+                print("saving converted image... ")
+                saveConvertedImage(data, renderOutputPath + imgFileName, compr)
+                print("done.")
+        else:
+            print("Already found a converted image for \"" + imgFileName +
+                  "\". Using the cached version: " + renderOutputPath + cachedFile)
+            print(
+                "If you do not want to load the cached file, simply set the regeneration parameter \"-r\"")
+            print("Loading cached file...")
+            data = loadConvertedImage(renderOutputPath + cachedFile)
             print("done.")
 
     return data
@@ -86,13 +101,14 @@ def sendData():
                 try:
                     sock.sendall(frameBuffer[curFrame]
                                  [lineNum].encode("ascii"))
-                except (ConnectionResetError, ConnectionAbortedError, OSError):
+                except (ConnectionResetError, ConnectionAbortedError, OSError, NameError):
                     time.sleep(0.1)
                     connect()
 
 
 def connect():
     global sock, lastTimeCalled
+    # prevent multiple reconnects from threads and also do reconnect interval timing
     if time.time() - lastTimeCalled >= reconnectInterval:
         lastTimeCalled = time.time()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,26 +118,45 @@ def connect():
             print("Connection refused")
 
 
-def main(host, port, imgPath, numThreads=1):
+def parseArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("host")
+    parser.add_argument("port", type=int)
+    parser.add_argument("imageFile")
+
+    parser.add_argument("-x", "--xoffset", type=int, default=0)
+    parser.add_argument("-y", "--yoffset", type=int, default=0)
+    parser.add_argument("-t", "--threads", type=int, default=1,
+                        help="number of threads for data sending")
+    parser.add_argument("-u", "--nocompression", action='store_const', const=True,
+                        default=False, help="save cache file uncompressed")
+    parser.add_argument("-r", "--regenerate", action='store_const', const=True,
+                        default=False, help="overwrite cached file")
+    parser.add_argument("-n", "--nocache", action='store_const', const=True,
+                        default=False, help="disable writing cache file")
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parseArgs()
+
     global pxHost, pxPort, lastTimeCalled
-    pxHost = host
-    pxPort = port
+    pxHost = args.host
+    pxPort = args.port
     lastTimeCalled = 0
 
-    if not os.path.exists(renderOutputPath):
-        os.makedirs(renderOutputPath)
-
-    data = getConvertedImage(imgPath)
     global frameBuffer, running, curFrame
+    data = getConvertedImage(args.imageFile, args.xoffset, args.yoffset,
+                             not args.nocompression, args.regenerate, args.nocache)
     frameBuffer = data['frameBuffer']
     frameTime = data['duration']
     running = True
     curFrame = 0
 
-    connect()
-
     threads = []
-    for t in range(numThreads):
+    for t in range(args.threads):
         thrd = threading.Thread(target=sendData)
         threads.append(thrd)
         thrd.start()
@@ -142,4 +177,4 @@ def main(host, port, imgPath, numThreads=1):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3], 1)
+    main()

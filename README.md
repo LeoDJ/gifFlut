@@ -1,23 +1,53 @@
 # GIF Flut
 
-Renders animated GIFs to Pixelflut.
+GIFflut renders animated GIFs and static images into the Pixelflut format and then sends the frames to the given Pixelflut server as fast as it can.  
+GIFflut also caches the converted images for faster starting later on, when sending the same image.
 
-Install necessary libraries  
-`pip install pillow`
+## Requirements
 
-Run with
-`python gifFlut.py host port pathToImageFile`  
-(Requires python3.3 or higher)
+GIFflut requires Python 3.3 or higher (because of the `lzma` package).
 
-## Pixelflut Server
 
-Included is the compiled version of the Java Pixelflut server from [Defnull](https://github.com/defnull/pixelflut).  
-Start server with `java -jar defnull-pixelwar-server.jar`.  
-Binds to `0.0.0.0:8080`.  
+1. Install necessary libraries  
+  `pip install pillow`
+2. Run with standard settings:  
+  `python gifFlut.py host port pathToImageFile`  
+  (Requires python3.3 or higher)
 
-Shortcuts:
+## Usage
 
+```
+usage: gifFlut.py [-h] [-x XOFFSET] [-y YOFFSET] [-t THREADS] [-u] [-r] [-n]
+                  host port imageFile
+
+positional arguments:
+  host
+  port
+  imageFile
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -x XOFFSET, --xoffset XOFFSET
+  -y YOFFSET, --yoffset YOFFSET
+  -t THREADS, --threads THREADS
+                        number of threads for data sending
+  -u, --nocompression   save cache file uncompressed
+  -r, --regenerate      overwrite cached file
+  -n, --nocache         disable writing cache file
+```
+
+# Pixelflut Server
+
+Included is the compiled version of the Java Pixelflut server from [Defnull](https://github.com/defnull).  
+For more servers written in Python and C++, go to [defnull/pixelflut](https://github.com/defnull/pixelflut)
+
+Start the server with `java -jar defnull-pixelwar-server.jar`.
+
+The server will bind to the address `0.0.0.0:8080`.
+
+Shortcuts:  
 - `c`: clear screen
 - `q`: exit
 - `l`: show label
-- `s`: save canvas as image
+- `s`: save canvas as image to `/tmp/canvas.png`
+
