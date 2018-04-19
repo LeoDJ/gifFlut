@@ -3,4 +3,5 @@ __pycache__
 *.png
 *.jpg
 *.gif
+*.pkl
 *.pklz

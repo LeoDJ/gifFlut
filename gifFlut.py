@@ -21,12 +21,18 @@ import gifToPF
 
 
 renderOutputPath = "rendered/"
-renderedFileSuffix = ".pklz"
+renderedFileSuffix = ".pkl"
+renderedFileSuffixCompr = ".pklz"
 
 reconnectInterval = 1
 
 
+# appends file extension based on compression
 def saveConvertedImage(obj, filename, compressed=True):
+    if compressed:
+        filename += renderedFileSuffixCompr
+    else:
+        filename += renderedFileSuffix
     with open(filename, 'wb') as output:
         if(compressed):
             with lzma.LZMAFile(output, "w", filters=[{'id': lzma.FILTER_LZMA2, 'preset': 1}]) as lzf:
@@ -35,7 +41,8 @@ def saveConvertedImage(obj, filename, compressed=True):
             pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
 
 
-def loadConvertedImage(filename, compressed=True):
+def loadConvertedImage(filename):
+    compressed = filename.endswith(renderedFileSuffixCompr)
     with open(filename, 'rb') as input:
         if(compressed):
             with lzma.LZMAFile(input, "r") as lzf:
@@ -47,7 +54,7 @@ def loadConvertedImage(filename, compressed=True):
 def getConvertedImage(imgPath):
     imgFileName = ntpath.basename(imgPath)
 
-    if imgFileName.endswith(renderedFileSuffix):  # load cached file directly
+    if imgFileName.endswith(renderedFileSuffix) or imgFileName.endswith(renderedFileSuffixCompr):  # load cached file directly
         data = loadConvertedImage(imgPath)
     else:
         foundCachedImage = False
@@ -66,8 +73,7 @@ def getConvertedImage(imgPath):
         if(not foundCachedImage):  # convert image, if no cached file exists
             data = gifToPF.main(imgPath)
             print("saving converted image... ")
-            saveConvertedImage(data, renderOutputPath +
-                               imgFileName + renderedFileSuffix)
+            saveConvertedImage(data, renderOutputPath + imgFileName)
             print("done.")
 
     return data
