@@ -107,7 +107,7 @@ def sendData(part=0, numParts=1):
                 try:
                     sock[part].sendall(frameBuffer[curFrame]
                                  [lineNum].encode("ascii"))
-                except (ConnectionResetError, ConnectionAbortedError, OSError, NameError, IndexError):
+                except (ConnectionResetError, ConnectionAbortedError, OSError, NameError, IndexError, TimeoutError):
                     time.sleep(0.1)
                     connect(part)
 
@@ -118,13 +118,19 @@ def connect(socketId=0):
     if time.time() - lastTimeCalled >= reconnectInterval or not currentlyConnecting:
         currentlyConnecting = True
         lastTimeCalled = time.time()
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if pxHost.count(":") < 2:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        else:
+            s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         sock.insert(socketId, s)
         try:
             print("connect " + str(socketId))
-            sock[socketId].connect((pxHost, int(pxPort)))
+            if pxHost.count(":") < 2:
+                sock[socketId].connect((pxHost, int(pxPort)))
+            else:
+                sock[socketId].connect((pxHost, int(pxPort), 0, 0))
             currentlyConnecting = False
-        except ConnectionRefusedError:
+        except (ConnectionRefusedError, TimeoutError):
             print("Connection refused")
             currentlyConnecting = False
 
@@ -174,7 +180,7 @@ def main():
     for t in range(args.threads):
         thrd = threading.Thread(target=sendData, args=(t, args.threads))
         threads.append(thrd)
-        time.sleep(0.1)
+        time.sleep(0.15)
         thrd.start()
 
     try:

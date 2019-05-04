@@ -6,7 +6,7 @@ from PIL import Image, ImageSequence
 
 import time
 
-packetSize = 512 #number of pixelflut commands per packet
+packetSize = 200 #number of pixelflut commands per packet
 
 def main(imgPath, offsetX=0, offsetY=0, algo=0):
     img = Image.open(imgPath)
@@ -26,6 +26,19 @@ def main(imgPath, offsetX=0, offsetY=0, algo=0):
     return {'frameBuffer': imageBuffer, 'duration': duration}
 
 
+def swapRGB(rgb, fromIdx, toIdx):
+    valFrom = rgb[fromIdx]
+    valTo = rgb[toIdx]
+    newRgb = list(rgb)
+    for i in range(0, len(rgb)):
+        if i == fromIdx:
+            newRgb[i] = valTo
+        elif i == toIdx:
+            newRgb[i] = valFrom
+        else:
+            newRgb[i] = rgb[i]
+    return tuple(newRgb)
+
 #returns array of pixelflut commands for whole line
 def generatePFLines(img, offX, offY, algo):
     # convert gif to rgb format (with respect to transparency)
@@ -44,6 +57,7 @@ def generatePFLines(img, offX, offY, algo):
             line = ""
             for x in range(img.size[0]):
                 rgb = img.getpixel((x, y))
+                rgb = swapRGB(rgb, 0, 2)
                 if hasAlpha:
                     hexColor = '%02x%02x%02x%02x' % rgb
                 else:
@@ -66,6 +80,7 @@ def generatePFLines(img, offX, offY, algo):
                 x = coordinates[index][0]
                 y = coordinates[index][1]
                 rgb = img.getpixel(coordinates[index])
+                rgb = swapRGB(rgb, 0, 2)
                 if hasAlpha:
                     hexColor = '%02x%02x%02x%02x' % rgb
                 else:
