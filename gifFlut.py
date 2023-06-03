@@ -100,9 +100,10 @@ def sendData(part=0, numParts=1):
     partStart = part * partLen
     partEnd = partStart + partLen - 1
     if part == numParts - 1: ##last frame must be handled extra
-        partEnd += 1
+        partEnd += (frameLen % numParts)
+    # print(frameLen, partLen, partStart, partEnd)
     while(running):
-        for lineNum in range(partStart, partStart + partLen):
+        for lineNum in range(partStart, partEnd + 1):
             if running:
                 try:
                     sock[part].sendall(frameBuffer[curFrame]
@@ -133,6 +134,10 @@ def connect(socketId=0):
         except (ConnectionRefusedError, TimeoutError):
             print("Connection refused")
             currentlyConnecting = False
+        except socket.gaierror as e:
+            print("Socket error", e, e.reason)
+            currentlyConnecting = False
+
 
 
 def parseArgs():
